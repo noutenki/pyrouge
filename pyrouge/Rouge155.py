@@ -92,6 +92,7 @@ class Rouge155(object):
         self.args = self.__clean_rouge_args(rouge_args)
         self._system_filename_pattern = None
         self._model_filename_pattern = None
+        self._input_format = 'SEE'
 
     def save_home_dir(self):
         config = ConfigParser()
@@ -122,6 +123,27 @@ class Rouge155(object):
                 "ROUGE path not set. Please set the ROUGE home directory "
                 "and ensure that ROUGE-1.5.5.pl exists in it.")
         return self._bin_path
+
+    @property
+    def input_format(self):
+        """
+        The input format of the summary files specified using the
+        '-z INPUT-FORMAT' option in ROUGE-1.5.5 package. 
+        INPUT-FORMAT can be SEE, SPL, ISI or SIMPLE
+        
+        SEE generally works for html files while SPL is used for text filessss
+        """
+
+        return self._input_format
+
+    @input_format.setter
+    def input_format(self, input_format_string):
+        if input_format_string in ['SEE', 'SPL', 'ISI', 'SIMPLE']:
+            self._input_format = input_format_string
+        else:
+            raise Exception(
+                "Invalid ROUGE Input Format."
+                "Valid options are: ['SEE', 'SPL', 'ISI', 'SIMPLE']")
 
     @property
     def system_filename_pattern(self):
@@ -237,7 +259,7 @@ class Rouge155(object):
     @staticmethod
     def write_config_static(system_dir, system_filename_pattern,
                             model_dir, model_filename_pattern,
-                            config_file_path, system_id=None):
+                            config_file_path, input_format, system_id=None):
         """
         Write the ROUGE configuration file, which is basically a list
         of system summary files and their corresponding model summary
@@ -257,6 +279,8 @@ class Rouge155(object):
             model_filename_pattern:     Regex string for matching model
                                         summary filenames.
             config_file_path:           Path of the configuration file.
+            input_format:               Input format of the summary files.
+                                        Default format is 'SEE'
             system_id:                  Optional system ID string which
                                         will appear in the ROUGE output.
 
@@ -287,7 +311,7 @@ class Rouge155(object):
                 eval_string = Rouge155.__get_eval_string(
                     task_id, system_id,
                     system_dir, system_filename,
-                    model_dir, model_filenames)
+                    model_dir, model_filenames, input_format)
                 f.write(eval_string)
             f.write("</ROUGE-EVAL>")
 
@@ -315,7 +339,7 @@ class Rouge155(object):
         Rouge155.write_config_static(
             self._system_dir, self._system_filename_pattern,
             self._model_dir, self._model_filename_pattern,
-            self._config_file, system_id)
+            self._config_file, self._input_format, system_id)
         self.log.info(
             "Written ROUGE configuration to {}".format(self._config_file))
 
@@ -429,7 +453,7 @@ class Rouge155(object):
     def __get_eval_string(
             task_id, system_id,
             system_dir, system_filename,
-            model_dir, model_filenames):
+            model_dir, model_filenames, input_format):
         """
         ROUGE can evaluate several system summaries for a given text
         against several model summaries, i.e. there is an m-to-n
@@ -452,7 +476,7 @@ class Rouge155(object):
     <EVAL ID="{task_id}">
         <MODEL-ROOT>{model_root}</MODEL-ROOT>
         <PEER-ROOT>{peer_root}</PEER-ROOT>
-        <INPUT-FORMAT TYPE="SEE">
+        <INPUT-FORMAT TYPE="{input_format}">
         </INPUT-FORMAT>
         <PEERS>
             {peer_elems}
@@ -464,7 +488,7 @@ class Rouge155(object):
 """.format(
             task_id=task_id,
             model_root=model_dir, model_elems=model_elems,
-            peer_root=system_dir, peer_elems=peer_elems)
+            peer_root=system_dir, peer_elems=peer_elems, input_format=input_format)
         return eval_string
 
     def __process_summaries(self, process_func):
