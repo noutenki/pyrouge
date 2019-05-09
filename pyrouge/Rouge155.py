@@ -582,7 +582,7 @@ class Rouge155(object):
             return rouge_args
 
     def __add_config_option(self, options):
-        return options + ['-m'] + [self._config_file]
+        return options + [self._config_file]
 
     def __get_config_path(self):
         if platform.system() == "Windows":
